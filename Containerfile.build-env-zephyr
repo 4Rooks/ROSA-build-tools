@@ -32,7 +32,8 @@ RUN <<EOF
                 graphviz \
                 device-tree-compiler \
                 xz-utils \
-                libncurses-dev
+                libncurses-dev \
+                unzip
 
         # Install x86-64 image-specific packages
 	if [ "${HOSTTYPE}" = "x86_64" ]; then
