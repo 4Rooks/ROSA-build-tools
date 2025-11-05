@@ -33,7 +33,9 @@ RUN <<EOF
                 device-tree-compiler \
                 xz-utils \
                 libncurses-dev \
-                unzip
+                unzip \
+                curl \
+                ca-certificates
 
         # Install x86-64 image-specific packages
 	if [ "${HOSTTYPE}" = "x86_64" ]; then
@@ -59,6 +61,26 @@ RUN <<EOF
 EOF
 
 
+# Install Go toolchain for CUE compilation
+ARG GO_VERSION=1.23.3
+ARG GO_ARCH=amd64
+RUN <<EOF
+        cd /tmp
+        wget -q https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz
+        tar -C /usr/local -xzf go${GO_VERSION}.linux-${GO_ARCH}.tar.gz
+        rm go${GO_VERSION}.linux-${GO_ARCH}.tar.gz
+EOF
+ENV PATH=/usr/local/go/bin:/root/go/bin:${PATH}
+ENV GOPATH=/root/go
+
+
+# Install CUE language tools
+ARG CUE_VERSION=v0.10.1
+RUN <<EOF
+        go install cuelang.org/go/cmd/cue@${CUE_VERSION}
+EOF
+
+
 # Setup a python environment and install requirements
 COPY resources/rosa-requirements.txt /tmp/rosa-requirements.txt
 ARG ZEPHYR_UPSTREAM_TAG=v4.1.0
@@ -71,7 +93,7 @@ RUN <<EOF
         pip install -r "${ZEPHYR_UPSTREAM_URL}/refs/tags/${ZEPHYR_UPSTREAM_TAG}/scripts/requirements.txt"
         pip install -r /tmp/rosa-requirements.txt
 EOF
-ENV PATH=/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV PATH=/venv/bin:${PATH}
 
 
 # Download and install Zephyr gcctoolchain & qemu for supported architectures
