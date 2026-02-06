@@ -1,0 +1,85 @@
+---
+name: Build and Publish Container
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'zephyr-v*'
+      - 'yocto-v*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine build target
+        id: target
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # Extract target (zephyr/yocto) and version from tag
+            TAG="${{ github.ref_name }}"
+            TARGET="$(echo "$TAG" | sed -E 's/^([a-z]+)-v.*/\1/')"
+            VERSION="$(echo "$TAG" | sed -E 's/^[a-z]+-//')"
+            IMAGE_TAG="build-env-${TARGET}-${VERSION}"
+            echo "is_tag=true" >> "$GITHUB_OUTPUT"
+          else
+            # Default to zephyr for main branch pushes
+            # Add more targets here as needed
+            TARGET="zephyr"
+            IMAGE_TAG="build-env-${TARGET}-latest"
+            echo "is_tag=false" >> "$GITHUB_OUTPUT"
+          fi
+          
+          {
+            echo "target=${TARGET}";
+            echo "image_tag=${IMAGE_TAG}";
+            echo "containerfile=Containerfile.build-env-${TARGET}";
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check if Containerfile exists
+        run: |
+          if [[ ! -f "${{ steps.target.outputs.containerfile }}" ]]; then
+            echo "Error: ${{ steps.target.outputs.containerfile }} not found"
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          tags: |
+            type=raw,value=${{ steps.target.outputs.image_tag }}
+
+      - name: Build and push container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ steps.target.outputs.containerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
