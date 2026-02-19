@@ -35,7 +35,9 @@ RUN <<EOF
                 libncurses-dev \
                 unzip \
                 curl \
-                ca-certificates
+                ca-certificates \
+                libsdl2-dev \
+                libsdl2-dev:amd64 \
 
         # Install x86-64 image-specific packages
 	if [ "${HOSTTYPE}" = "x86_64" ]; then
