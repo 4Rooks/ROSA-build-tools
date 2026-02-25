@@ -83,7 +83,7 @@ EOF
 
 # Setup a python environment and install requirements
 COPY resources/rosa-requirements.txt /tmp/rosa-requirements.txt
-ARG ZEPHYR_UPSTREAM_TAG=v4.1.0
+ARG ZEPHYR_UPSTREAM_TAG=v4.3.0
 ARG ZEPHYR_UPSTREAM_URL=https://raw.githubusercontent.com/zephyrproject-rtos/zephyr
 RUN <<EOF
         mkdir /venv
@@ -98,7 +98,7 @@ ENV PATH=/venv/bin:${PATH}
 
 # Download and install Zephyr gcctoolchain & qemu for supported architectures
 ARG SDK_ARCH=x86_64
-ARG SDK_VERSION=0.17.0
+ARG SDK_VERSION=0.17.3
 RUN <<EOF
         mkdir -p /opt/toolchains
         cd /opt/toolchains
@@ -107,5 +107,5 @@ RUN <<EOF
         ./zephyr-sdk-"${SDK_VERSION}"/setup.sh -t arm-zephyr-eabi -h
         rm ./*.tar.xz
 EOF
-ENV ZEPHYR_SDK_INSTALL_DIR=/opt/toolchains/zephyr-sdk-0.17.0
+ENV ZEPHYR_SDK_INSTALL_DIR=/opt/toolchains/zephyr-sdk-"${SDK_VERSION}"
 ENV ZEPHYR_TOOLCHAIN_VARIANT=zephyr
